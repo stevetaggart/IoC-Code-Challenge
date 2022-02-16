@@ -44,5 +44,19 @@ namespace IoC_Code_Challenge
             // Act and Assert
             Assert.Throws<InvalidOperationException>(() => sut.Resolve<ICalculator>());
         }
+
+        [Fact]
+        public void Container_injects_constructor_dependencies_for_known_types()
+        {
+            // Arrange
+            var sut = new IocContainer();
+            sut.Register<ICalculator, Calculator>();
+
+            // Act
+            var controller = sut.Resolve<CalculatorController>();
+
+            // Assert
+            Assert.Equal(42, controller.PerformCalculations(40, 2));
+        }
     }
 }

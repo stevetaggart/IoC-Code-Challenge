@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace IoC_Code_Challenge
 {
@@ -11,22 +12,41 @@ namespace IoC_Code_Challenge
         {
             if (lifeCycle == LifeCycleType.Singleton)
             {
-                var lazy = new Lazy<T2>(Activator.CreateInstance<T2>());
+                // Create a lazy object initialized with an instance of T2
+                var lazy = new Lazy<T2>((T2)GetInstance(typeof(T2)));
+                // Always return the same object
                 registrations.Add(typeof(T1), () => lazy.Value);
             }
             else
             {
-                registrations.Add(typeof(T1), () => Activator.CreateInstance(typeof(T2)));
+                registrations.Add(typeof(T1), () => GetInstance(typeof(T2)));
             }
         }
 
         public T Resolve<T>()
         {
-            if (!registrations.ContainsKey(typeof(T)))
+            return (T)GetInstance(typeof(T));
+        }
+
+        private object GetInstance(Type type)
+        {
+            if (registrations.TryGetValue(type, out Func<object> fac))
             {
-                throw new InvalidOperationException($"{typeof(T)} has not been registered.");
+                return fac();
             }
-            return (T)registrations[typeof(T)]();
+            else if (!type.IsAbstract)
+            { 
+                return CreateInstance(type); 
+            }
+            throw new InvalidOperationException("No registration found for " + type);
+        }
+
+        private object CreateInstance(Type implementationType)
+        {
+            var ctor = implementationType.GetConstructors().Single();
+            var paramTypes = ctor.GetParameters().Select(p => p.ParameterType);
+            var dependencies = paramTypes.Select(GetInstance).ToArray();
+            return Activator.CreateInstance(implementationType, dependencies);
         }
     }
 }
